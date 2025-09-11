@@ -1,0 +1,176 @@
+import transporter from "../configs/nodemailer.js";
+import Booking from "../models/Booking.js";
+import Hotel from "../models/Hotel.js";
+import Room from "../models/Room.js";
+
+// Utility to check if a room is available
+const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
+  try {
+    const bookings = await Booking.find({
+      room,
+      checkInDate: { $lte: checkOutDate },
+      checkOutDate: { $gte: checkInDate },
+    });
+    const IsAvailable = bookings.length === 0;
+    return IsAvailable;
+  } catch (error) {
+    console.error(error.message);
+    // return false;
+  }
+};
+
+// API: Check if room is available
+export const checkAvailabiltyAPI = async (req, res) => {
+  try {
+    const { room, checkInDate, checkOutDate } = req.body;
+    const isAvailable = await checkAvailability({
+      checkInDate,
+      checkOutDate,
+      room,
+    });
+    res.json({ success: true, isAvailable });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// API: Create a new booking
+export const createBooking = async (req, res) => {
+  try {
+    const { room, checkInDate, checkOutDate, guests } = req.body;
+    const user = req.user._id; // Clerk user id from middleware
+
+    // Availability check
+    const isAvailable = await checkAvailability({
+      checkInDate,
+      checkOutDate,
+      room,
+    });
+    if (!isAvailable) {
+      return res.json({
+        success: false,
+        message: "Room is not available"
+        // isAvailable,
+      });
+    }
+
+    // Room + hotel details
+    const roomData = await Room.findById(room).populate("hotel");
+    // if (!roomData) {
+    //   return res.json({ success: false, message: "Room not found" });
+    // }
+    // if (!roomData.hotel) {
+    //   return res.json({ success: false, message: "No hotel linked to this room" });
+    // }
+    
+    let totalPrice = roomData.pricePerNight;
+
+    // Price calculation
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
+    const timeDiff = checkOut.getTime() - checkIn.getTime();
+    const nights = Math.ceil((timeDiff / (1000 * 3600 * 24)));
+    totalPrice = totalPrice * nights;
+
+    // Save booking
+    const booking = await Booking.create({
+      user,
+      room,
+      hotel: roomData.hotel._id,
+      guests: +guests,
+      checkInDate,
+      checkOutDate,
+      totalPrice,
+    });
+
+    // Use req.userEmail and req.userName, fallback to test email if missing
+    // const recipientEmail = req.userEmail || process.env.TEST_EMAIL || "test@example.com";
+    // const recipientName = req.userName || "Guest";
+
+    const mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: req.user.email,
+      subject: "Hotel Booking Details",
+      html: 
+      `<h2>Your booking Details</h2>
+      <p>Dear ${req.user.username},</p>
+      <p>Thank you for booking with us! Here are your booking details:</p>
+      <ul>
+      <li><strong>Booking ID:</strong> ${booking._id}</li>
+      <li><strong>Hotel:</strong> ${roomData.hotel.name}</li>
+      <li><strong>location:</strong> ${roomData.hotel.address}</li>
+      <li><strong>Date:</strong> ${booking.checkInDate.toDateString()}</li>
+      <li><strong>Booking Amount:</strong> ${process.env.CURRENCY || '$'} ${booking.totalPrice} /night</li>
+      </ul>
+      <p>We look forward to hosting you!</p>
+      <p>If you need to make any changes, feel free to contact us.</p>
+      `
+    }
+
+    if (!req.userEmail) {
+      console.warn("No recipients defined: req.userEmail is missing. Using fallback email.");
+    }
+
+    await transporter.sendMail(mailOptions)
+
+    res.json({
+      success: true,
+      message: "Booking created successfully"
+    });
+  } catch (error) {
+    console.log(error);
+    // console.error("createBooking error:", error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// API: Get bookings for logged-in user
+export const getUserBookings = async (req, res) => {
+  try {
+    const user = req.user._id; // Clerk userId
+    const bookings = await Booking.find({ user }).populate("hotel").sort({ createdAt: -1 })
+      .populate({
+        path: "room",
+        select: "images roomType hotel", // explicitly select images, roomType, hotel
+        populate: { path: "hotel" }
+      })
+
+    res.json({ success: true, bookings });
+  } catch (error) {
+    res.json({ success: false, message: "Failed to fetch bookings" });
+  }
+};
+
+// API: Get bookings for logged-in hotel owner
+export const getHotelBookings = async (req, res) => {
+  try {
+    const hotel = await Hotel.findOne({ owner: req.userId }); // Clerk userId
+    if (!hotel) {
+      return res.json({ success: false, message: "No hotel found" });
+    }
+
+    const bookings = await Booking.find({ hotel: hotel._id }).populate("room hotel user").sort({ createdAt: -1 });
+      // .populate({
+      //   path: "user",
+      //   select: "username email image"
+      // })
+      // .populate({
+      //   path: "room",
+      //   select: "roomType images hotel",
+      //   populate: { path: "hotel", select: "name" }
+      // })
+
+    const totalBookings = bookings.length;
+    const totalRevenue = bookings.reduce(
+      (acc, booking) => acc + booking.totalPrice,
+      0
+    );
+
+    res.json({
+      success: true,
+      dashboardData: { totalBookings, totalRevenue, bookings },
+    });
+  } catch (error) {
+    res.json({ success: false, message: "Failed to fetch bookings" });
+  }
+};
