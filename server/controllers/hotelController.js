@@ -10,7 +10,7 @@ export const registerHotel = async (req,res)=>{
         // console.log("req.auth:", req.auth);
         
         // Try both patterns to see which one works
-        const owner = req.auth?.userId || req.user?._id;
+        const owner = req.auth.userId;
         
         if (!owner) {
             return res.status(401).json({
@@ -24,10 +24,9 @@ export const registerHotel = async (req,res)=>{
             return res.json({success: false,message: "Hotel Already Registered"})
         }
 
-        await Hotel.create({name,address,contact,city,owner});
+        await Hotel.create({name,address,contact,city,owner: owner});
 
-        await User.findByIdAndUpdate(owner, {role: "hotelOwner"});
-
+        await User.findOneAndUpdate({ clerkId: owner }, { role: "hotelOwner" });
         res.json({success: true, message: "Hotel Registered Successfully"})
 
     } catch (error) {
@@ -39,7 +38,7 @@ export const registerHotel = async (req,res)=>{
 export const getMyHotel = async (req, res) => {
     try {
         // Use same flexible pattern
-        const owner = req.auth?.userId || req.user?._id;
+        const owner = req.user._id;
         
         if (!owner) {
             return res.status(401).json({

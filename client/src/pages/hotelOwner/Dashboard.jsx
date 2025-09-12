@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 
 const Dashboard = () => {
 
-    const { currency, user, getToken, toast, axios} = useAppContext();
+    const { currency, user, getToken, axios} = useAppContext();
 
     const [dashboardData,setdashboardData] = useState({
       bookings: [],
@@ -19,6 +19,8 @@ const Dashboard = () => {
         const {data} = await axios.get('/api/bookings/hotel', {headers: {Authorization: `Bearer ${await getToken()}`}})
         if(data.success){
           setdashboardData(data.dashboardData)
+          console.log(dashboardData.bookings);
+          
         }else{
           toast.error(data.message)
         }
