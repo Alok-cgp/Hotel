@@ -15,6 +15,7 @@ import {Toaster} from 'react-hot-toast';
 import Loader from './components/Loader';
 import { useAppContext } from './context/appContext';
 
+
 const App = () => {
 
   const isOwnerPath = useLocation().pathname.includes("owner");
