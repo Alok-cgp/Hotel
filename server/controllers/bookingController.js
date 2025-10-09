@@ -39,7 +39,7 @@ export const checkAvailabiltyAPI = async (req, res) => {
 export const createBooking = async (req, res) => {
   try {
     const { room, checkInDate, checkOutDate, guests } = req.body;
-    const user = req.user._id; // Clerk user id from middleware
+    const user = req.userId; // Clerk user id from middleware
 
     // Availability check
     const isAvailable = await checkAvailability({
@@ -145,21 +145,13 @@ export const getUserBookings = async (req, res) => {
 // API: Get bookings for logged-in hotel owner
 export const getHotelBookings = async (req, res) => {
   try {
-    const hotel = await Hotel.findOne({ owner: req.user._id }); // Clerk userId
+    // Use req.userId set by authMiddleware
+    const hotel = await Hotel.findOne({ owner: req.userId }); // Clerk userId
     if (!hotel) {
       return res.json({ success: false, message: "No hotel found" });
     }
 
     const bookings = await Booking.find({ hotel: hotel._id }).populate("room hotel user").sort({ createdAt: -1 })
-      // .populate({
-      //   path: "user",
-      //   select: "username email image"
-      // })
-      // .populate({
-      //   path: "room",
-      //   select: "roomType images hotel",
-      //   populate: { path: "hotel", select: "name" }
-      // })
 
     const totalBookings = bookings.length;
     const totalRevenue = bookings.reduce(
@@ -172,7 +164,8 @@ export const getHotelBookings = async (req, res) => {
       dashboardData: { totalBookings, totalRevenue, bookings },
     });
   } catch (error) {
-    res.json({ success: false, message: "Failed to fetch bookings" });
+    console.error("getHotelBookings error:", error.message, error.stack);
+    res.json({ success: false, message: "Failed to fetch bookings: " + error.message });
   }
 };
 
