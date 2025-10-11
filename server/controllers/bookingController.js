@@ -85,16 +85,16 @@ export const createBooking = async (req, res) => {
     });
 
     // Use req.userEmail and req.userName, fallback to test email if missing
-    // const recipientEmail = req.userEmail || process.env.TEST_EMAIL || "test@example.com";
-    // const recipientName = req.userName || "Guest";
+    const recipientEmail = req.userEmail || process.env.TEST_EMAIL || "test@example.com";
+    const recipientName = req.userName || "Guest";
 
     const mailOptions = {
       from: process.env.SENDER_EMAIL,
-      to: req.user.email,
+      to: recipientEmail,
       subject: "Hotel Booking Details",
-      html: 
+      html:
       `<h2>Your booking Details</h2>
-      <p>Dear ${req.user.username},</p>
+      <p>Dear ${recipientName},</p>
       <p>Thank you for booking with us! Here are your booking details:</p>
       <ul>
       <li><strong>Booking ID:</strong> ${booking._id}</li>
@@ -112,7 +112,14 @@ export const createBooking = async (req, res) => {
       console.warn("No recipients defined: req.userEmail is missing. Using fallback email.");
     }
 
-    await transporter.sendMail(mailOptions)
+    console.log("Attempting to send booking confirmation email to:", recipientEmail);
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log("Email sent successfully to:", recipientEmail, "Message ID:", info.messageId);
+    } catch (emailError) {
+      console.error("Failed to send email:", emailError.message);
+      // Optionally, you could return an error here, but since booking is created, maybe just log
+    }
 
     res.json({
       success: true,
@@ -128,7 +135,7 @@ export const createBooking = async (req, res) => {
 // API: Get bookings for logged-in user
 export const getUserBookings = async (req, res) => {
   try {
-    const user = req.user._id; // Clerk userId
+    const user = req.userId; // Clerk userId
     const bookings = await Booking.find({ user }).populate("hotel").sort({ createdAt: -1 })
       .populate({
         path: "room",
@@ -173,21 +180,48 @@ export const stripePayment = async (req, res) => {
   try {
     const { bookingId } = req.body;
 
+    if (!bookingId) {
+      return res.json({ success: false, message: "Booking ID is required" });
+    }
+
     const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.json({ success: false, message: "Booking not found" });
+    }
+
+    if (!booking.room) {
+      return res.json({ success: false, message: "Room information missing for this booking" });
+    }
+
     const roomData = await Room.findById(booking.room).populate("hotel");
+    if (!roomData || !roomData.hotel) {
+      return res.json({ success: false, message: "Room or hotel data not found" });
+    }
+
     const hotelPrice = booking.totalPrice;
+    if (!hotelPrice || hotelPrice <= 0) {
+      return res.json({ success: false, message: "Invalid booking amount" });
+    }
+
     const { origin } = req.headers;
+    if (!origin) {
+      return res.json({ success: false, message: "Origin header missing" });
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return res.json({ success: false, message: "Payment configuration error" });
+    }
 
     const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
 
     const line_items = [
       {
         price_data:{
-          currency: "usd",
+          currency: "INR",
           product_data:{
             name: roomData.hotel.name,
           },
-          unit_amount: hotelPrice * 100, 
+          unit_amount: hotelPrice * 100,
       },
       quantity: 1,
       }
@@ -196,14 +230,49 @@ export const stripePayment = async (req, res) => {
     const session = await stripeInstance.checkout.sessions.create({
       line_items,
       mode: "payment",
-      success_url: `${origin}/Loader/my-bookings`,
+      success_url: `${origin}/my-bookings?session_id={CHECKOUT_SESSION_ID}`, // Modified this line
       cancel_url: `${origin}/my-bookings`,
-      metadata:{
+      metadata: {
         bookingId,
       }
-    })
+    });
     res.json({ success: true, url: session.url });
-  }catch (error) {
-    res.json({ success: false, message: "Payment failed" });
+  } catch (error) {
+    console.error("Stripe payment error:", error);
+    res.json({ success: false, message: "Payment failed: " + error.message });
   }
-}
+};
+
+export const verifyPaymentSuccess = async (req, res) => {
+  try {
+    const { session_id } = req.query;
+    if (!session_id) {
+      return res.json({ success: false, message: "No session ID provided" });
+    }
+
+    const stripeInstance = stripe(process.env.STRIPE_SECRET_KEY);
+    const session = await stripeInstance.checkout.sessions.retrieve(session_id);
+    
+    if (session.payment_status === "paid") {
+      const booking = await Booking.findByIdAndUpdate(
+        session.metadata.bookingId,
+        {
+          isPaid: true,
+          status: "confirmed"
+        },
+        { new: true } // Return updated document
+      );
+      
+      if (!booking) {
+        return res.json({ success: false, message: "Booking not found" });
+      }
+      
+      res.json({ success: true, booking });
+    } else {
+      res.json({ success: false, message: "Payment incomplete" });
+    }
+  } catch (error) {
+    console.error("Payment verification error:", error);
+    res.json({ success: false, message: error.message });
+  }
+};

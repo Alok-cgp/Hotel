@@ -47,9 +47,29 @@ const MyBookings = () => {
         }
     }
 
+    const checkPaymentStatus = async () => {
+        const sessionId = new URLSearchParams(window.location.search).get('session_id');
+        if (sessionId) {
+            try {
+                const {data} = await axios.get(`/api/bookings/payment-success?session_id=${sessionId}`, {
+                    headers: { Authorization: `Bearer ${await getToken()}` }
+                });
+                if (data.success) {
+                    toast.success("Payment successful!");
+                    fetchUserBookings(); // Refetch bookings to update status
+                }
+            } catch (error) {
+                toast.error("Could not verify payment status");
+            }
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    };
+
     useEffect(()=>{
         if(user){
             fetchUserBookings();
+            checkPaymentStatus(); // Check payment status on mount
         }
     },[user])
 
@@ -69,14 +89,14 @@ const MyBookings = () => {
             <div key={booking._id} className='grid grid-cols-1 md:grid-cols-[3fr_2fr_1fr] w-full border-b border-gray-300 py-6 first:border-t'>
                 <div className='flex flex-col md:flex-row'>
                     <img
-                        src={booking.room.images && booking.room.images.length > 0 ? booking.room.images[0] : assets.roomImg1}
+                        src={booking.room && booking.room.images && booking.room.images.length > 0 ? booking.room.images[0] : assets.roomImg1}
                         alt="hotel-img"
                         className='min-md:w-44 rounded shadow object-cover'
                     />
                     <div className='flex flex-col gap-1.5 max-md:mt-3 min-md:ml-4'>
                         <p className='font-playFair text-2xl'>
                           {booking.hotel?.name || 'N/A'}
-                          <span className='font-inter text-sm'> {booking.room.roomType}</span>
+                          <span className='font-inter text-sm'> {booking.room ? booking.room.roomType : 'N/A'}</span>
                         </p>
                         <div className='flex items-center gap-1 text-sm text-gray-500'>
                             <img src={assets.locationIcon} alt="location-icon" />
