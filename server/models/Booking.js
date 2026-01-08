@@ -3,17 +3,16 @@ import mongoose from "mongoose";
 const bookingSchema = new mongoose.Schema(
   {
     user: { 
-      type: String, // Clerk userId (e.g. "user_123xyz")
-      ref: "User", 
+      type: String, // Clerk userId (e.g. "user_123xyz") - Keep as String
       required: true 
     },
     room: { 
-      type: String, 
+      type: mongoose.Schema.Types.ObjectId, // ✅ Changed from String to ObjectId
       ref: "Room", 
       required: true 
     },
     hotel: { 
-      type: String, 
+      type: mongoose.Schema.Types.ObjectId, // ✅ Changed from String to ObjectId
       ref: "Hotel", 
       required: true 
     },

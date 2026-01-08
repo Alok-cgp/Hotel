@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Title from '../../components/Title'
-import { useAppContext } from '../../context/AppContext'
+import { useAppContext } from '../../context/Context'
+import { useCallback } from 'react'
 import toast from 'react-hot-toast'
 
 const ListRoom = () => {
@@ -8,7 +9,7 @@ const ListRoom = () => {
   const [rooms,setRooms] = useState([])
   const {axios,getToken,user,currency} = useAppContext()
 
-  const fetchRooms = async ()=>{
+  const fetchRooms = useCallback(async ()=>{
     try {
       const { data } = await axios.get('/api/rooms/owner', {headers: {Authorization: `Bearer ${await getToken()}`}})
       if(data.success){
@@ -21,7 +22,7 @@ const ListRoom = () => {
               toast.error(error.message)
 
     }
-  }
+  },[axios, getToken])
 
   const toggleAvailability = async (roomId)=>{
       const {data} = await axios.post('/api/rooms/toggle-availability', {roomId}, 
@@ -38,7 +39,7 @@ const ListRoom = () => {
     if(user){
       fetchRooms()
     }
-  },[user])
+  },[user, fetchRooms])
 
   
 

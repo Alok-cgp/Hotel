@@ -14,13 +14,11 @@ import { stripeWebhooks } from "./controllers/stripeWebhooks.js";
 connectDB();
 connectCloudinary();
 
-
-
 const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://quickstay-omega-six.vercel.app"], // frontend URLs
+    origin: ["http://localhost:5173", "https://quickstay-omega-six.vercel.app"],
     credentials: true,
   })
 );
@@ -29,7 +27,7 @@ app.post('/api/stripe', express.raw({type: 'application/json'}), stripeWebhooks)
 
 app.use(express.json());
 
-// Clerk middleware injects req.auth (deprecated), use req.auth() instead
+// Use clerkMiddleware - it handles both cookies and Bearer tokens
 app.use(clerkMiddleware());
 
 app.use("/api/clerk", clerkWebhooks);

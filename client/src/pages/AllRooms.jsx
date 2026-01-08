@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react'
-import {assets, facilityIcons, roomsDummyData} from '../assets/assets'
-import {Link, useNavigate, useSearchParams} from 'react-router-dom'
+import React, { useMemo, useState, useEffect } from 'react'
+import {assets, facilityIcons} from '../assets/assets'
+import {Link, useSearchParams} from 'react-router-dom'
 import StarRating from '../components/StarRating'
-import { useAppContext } from '../context/AppContext'
+import { useAppContext } from '../context/Context'
 
 
 const CheckBox = ({label,selected = false, onChange = () => { }})=>{
@@ -17,7 +17,7 @@ const CheckBox = ({label,selected = false, onChange = () => { }})=>{
 const RadioButton = ({label,selected = false, onChange = () => { }})=>{
     return (
         <label className='flex gap-3 items-center cursor-pointer mt-2 text-sm'>
-          <input type="radio" name='sortOption' checked={selected} onChange={(e)=>onChange(label)} />
+          <input type="radio" name='sortOption' checked={selected} onChange={()=>onChange(label)} />
           <span className='font-light select-none'>{label}</span>
         </label>
     )
@@ -105,9 +105,9 @@ const AllRooms = () => {
     return room.hotel.city.toLowerCase().includes(destination.toLowerCase())
    }
 
-   const filteredRooms = useMemo(()=>{
+  const filteredRooms = useMemo(()=>{
     return rooms.filter(room => matchesRoomType(room) && matchesPriceRange(room) && filterDestination(room)).sort(sortRooms);
-   },[rooms, selectedFilters, selectSort, searchParams])
+  },[rooms, selectedFilters, selectSort, searchParams, matchesRoomType, matchesPriceRange, filterDestination, sortRooms])
 
    const clearFilters = ()=>{
     setSelectedFilters({
@@ -115,8 +115,8 @@ const AllRooms = () => {
       priceRange: [],
     });
     setSelectSort('');
-    searchParams({});
-   }
+    setSearchParams({});
+  }
 
   return (
     <div className='flex flex-col-reverse lg:flex-row items-start justify-between pt-28 md:pt-35 px-4 md:px-16 lg:px-24 xl:px-32'>
@@ -126,11 +126,15 @@ const AllRooms = () => {
             <p className='text-sm md:text-base text-gray-500/90 mt-2 max-w-174'>Take advantage of our limited-time and special packages to enhance your stay and create your unforgettable memories.</p>
           </div>
 
-          {filteredRooms.map((room)=>(
+          {filteredRooms.map((room, index) => (
             <div key={room._id} className='flex flex-col md:flex-row items-start py-10 gap-6 border-b border-gray-300 last:pb-30 last:border-0'>
-              <img onClick={()=>{navigate(`/rooms/${room._id}`); scrollTo(0,0)}}
-              src={room.images[0]} alt="hotel-img" title='View Room Details'
-              className='max-h-65 md:w-1/2 rounded-xl shadow-lg object-cover cursor-pointer'/>
+              <img 
+                onClick={()=>{navigate(`/rooms/${room._id}`); scrollTo(0,0)}}
+                src={room.images[index % room.images.length]} 
+                alt="hotel-img" 
+                title='View Room Details'
+                className='max-h-65 md:w-1/2 rounded-xl shadow-lg object-cover cursor-pointer'
+              />
 
               <div className='md:w-1/2 flex flex-col gap-2'>
                 <p className='text-gray-500'>{room.hotel?.city}</p>
@@ -157,7 +161,6 @@ const AllRooms = () => {
                 <p className='text-xl font-medium text-gray-700'>Rs.{room.pricePerNight} /night</p>
               </div>
             </div>
-
           ))}
       </div>
 
@@ -167,7 +170,7 @@ const AllRooms = () => {
             <p className='text-base font-medium text-gray-800'>FILTERS</p>
             <div className='text-xs cursor-pointer'>
               <span onClick={()=>setOpenFilters(!openFilters)} className='lg:hidden'>{openFilters ? "HIDE" : "SHOW"}</span>
-              <span className='hidden lg:block'>CLEAR</span>
+              <span className='hidden lg:block' onClick={clearFilters}>CLEAR</span>
             </div>
           </div>
 
@@ -199,4 +202,4 @@ const AllRooms = () => {
   )
 }
 
-export default AllRooms 
+export default AllRooms

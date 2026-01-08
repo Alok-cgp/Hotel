@@ -1,10 +1,13 @@
-import { messageInRaw } from "svix";
+import User from "../models/User.js";
 
 export const getUserData = async (req,res)=>{
     try {
-        const role = req.user.role;
-        const recentSearchedCities = req.user.recentSearchedCities;
-        res.json({success: true, recentSearchedCities})
+        const user = await User.findById(req.userId).lean();
+        if (!user) {
+            return res.json({success: false, message: "User not found"});
+        }
+        const { role, recentSearchedCities } = user;
+        res.json({success: true, role, recentSearchedCities})
     } catch (error) {
         res.json({success: false, message: error.message})
     }
@@ -13,7 +16,10 @@ export const getUserData = async (req,res)=>{
 export const storeRecentSearchedCities = async (req,res)=>{
     try {
         const {recentSearchedCity} = req.body
-        const user = await req.user
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.json({success: false, message: "User not found"});
+        }
 
         if (user.recentSearchedCities.length < 3){
             user.recentSearchedCities.push(recentSearchedCity)

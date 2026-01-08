@@ -1,8 +1,7 @@
 import React from 'react'
 import HotelCard from './HotelCard'
 import Title from './Title'
-import { useNavigate } from 'react-router-dom'
-import { useAppContext } from '../context/AppContext'
+import { useAppContext } from '../context/Context'
 import { useState } from 'react'
 import { useEffect } from 'react'
 
@@ -10,13 +9,9 @@ const RecommendedHotels = () => {
   const {rooms,searchedCities} = useAppContext();
   const [recommended,setRecommended] = useState([])
 
-  const filterHotels = ()=>{
+  useEffect(()=>{
     const filteredHotels = rooms.slice().filter( room => searchedCities.includes(room?.hotel?.city));
     setRecommended(filteredHotels);
-  }
-
-  useEffect(()=>{
-    filterHotels()
   },[rooms, searchedCities])
 
   return recommended.length > 0 && (

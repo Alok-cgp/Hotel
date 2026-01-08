@@ -1,19 +1,19 @@
 import axios from "axios";
-import { createContext, useContext, useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {useNavigate} from "react-router-dom";
 import {useUser, useAuth} from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
+import { roomsDummyData } from "../assets/assets";
+import { AppContext } from "./Context";
 
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
-
-const AppContext = createContext();
 
 export const AppProvider = ({ children })=>{
 
     const currency = import.meta.env.VITE_CURRENCY || "$";
     const navigate = useNavigate();
     const {user} = useUser();
-    const {getToken} = useAuth();
+    const {getToken, isLoaded, isSignedIn} = useAuth();
 
     const [isOwner,setIsOwner] = useState(false);
     const [showHotelReg,setShowHotelReg] = useState(false);
@@ -21,104 +21,130 @@ export const AppProvider = ({ children })=>{
     const [rooms,setRooms] = useState([]);
     const [loadingUser, setLoadingUser] = useState(true);
 
-    const fetchRooms = async ()=>{
+    const fetchRooms = useCallback(async ()=>{
         try {
             const {data} = await axios.get('/api/rooms')
             if(data.success){
                 setRooms(data.rooms)
             }else{
                 toast.error(data.message)
+                setRooms(roomsDummyData)
             }
         } catch (error) {
             toast.error(error.message)
+            setRooms(roomsDummyData)
         }
-    }
+    },[])
 
-    const fetchUser = async ()=>{
+    const fetchUser = useCallback(async ()=>{
         try {
-            const {data} = await axios.get('/api/user', {headers: {Authorization: `Bearer ${await getToken()}`}})
+            // More robust checks
+            if (!isLoaded) {
+                console.log("Clerk not loaded yet");
+                return;
+            }
+            
+            if (!isSignedIn) {
+                console.log("User not signed in");
+                setIsOwner(false);
+                setLoadingUser(false);
+                return;
+            }
+
+            // Wait for token
+            const token = await getToken();
+            console.log("Token obtained:", token ? "✓" : "✗");
+            
+            if (!token) {
+                console.log("No token available");
+                setIsOwner(false);
+                setLoadingUser(false);
+                return;
+            }
+
+            const {data} = await axios.get('/api/user', {
+                headers: {Authorization: `Bearer ${token}`}
+            })
+            
             if(data.success){
                 setIsOwner(data.role === "hotelOwner");
                 setSearchedCities(data.recentSearchedCities)
-                // Keep your existing role check as backup
+                console.log("User fetched successfully, role:", data.role);
             }else{
-                setTimeout(()=>{
-                    fetchUser()
-                },5000)
+                setIsOwner(false);
             }
         } catch (error) {
-            // console.log("fetchUser error:", error);
-            toast.error(error.message)
+            console.log("fetchUser error:", error.response?.status, error.message);
+            if (error?.response?.status === 401) {
+                setIsOwner(false);
+            } else {
+                toast.error("Failed to load user data")
+            }
         } 
         finally {
             setLoadingUser(false);
         }
-    }
+    },[getToken, isLoaded, isSignedIn])
 
-    // New function to check hotel ownership directly from hotels collection
-    const checkHotelOwnership = async () => {
+    const checkHotelOwnership = useCallback(async () => {
         try {
-            if (!user) {
-                setIsOwner(false);
+            if (!isLoaded || !isSignedIn) {
                 return;
             }
 
             const token = await getToken();
-            if (token) {
-                const { data } = await axios.get('/api/hotels/check-ownership', {
-                    headers: { Authorization: `Bearer ${await getToken()}` }
-                });
-                
-                if (data.success) {
-                    setIsOwner(data.isOwner);
-                    console.log("Hotel ownership check result:", data.isOwner);
-                } else {
-                    console.log("Hotel ownership check failed:", data.message);
-                    // Fallback to user role if hotel check fails
-                }
+            if (!token) {
+                return;
+            }
+
+            const { data } = await axios.get('/api/hotels/check-ownership', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (data.success) {
+                setIsOwner(data.isOwner);
+                console.log("Hotel ownership check:", data.isOwner);
             }
         } catch (error) {
-            console.log("Error checking hotel ownership:", error);
-            // Don't show toast error for this as it might be called frequently
-            // Keep existing isOwner state as fallback
+            if (error?.response?.status !== 401) {
+                console.log("Error checking hotel ownership:", error);
+            }
         }
-    };
+    },[getToken, isLoaded, isSignedIn]);
 
-
-    // Enhanced user fetch that also checks hotel ownership
-    const fetchUserAndHotelStatus = async () => {
-        if (!user) {
+    const fetchUserAndHotelStatus = useCallback(async () => {
+        if (!isSignedIn || !isLoaded) {
             setIsOwner(false);
             setLoadingUser(false);
             return;
         }
 
+        setLoadingUser(true);
+        
         try {
-            // First fetch user data (your existing logic)
             await fetchUser();
-            
-            // Then check hotel ownership as additional verification
             await checkHotelOwnership();
         } catch (error) {
             console.log("Error in fetchUserAndHotelStatus:", error);
+        } finally {
             setLoadingUser(false);
         }
-    };
+    },[isSignedIn, isLoaded, fetchUser, checkHotelOwnership]);
 
     useEffect(()=>{
-        if(user){
-            fetchUserAndHotelStatus(); // Call the enhanced function
-            fetchUser();
-        } 
-        else {
-            setIsOwner(false);
-            setLoadingUser(false);
+        if(isLoaded){
+            if(isSignedIn) {
+                fetchUserAndHotelStatus();
+            } else {
+                setIsOwner(false);
+                setLoadingUser(false);
+            }
         }
-    },[user])
+    },[isLoaded, isSignedIn])
 
     useEffect(()=>{
         fetchRooms();
-    },[])
+    },[fetchRooms])
 
     const value = {
         currency, 
@@ -135,8 +161,10 @@ export const AppProvider = ({ children })=>{
         rooms, 
         setRooms,
         loadingUser,
-        checkHotelOwnership, // Expose this function
-        fetchUser // Expose fetchUser in case needed elsewhere
+        checkHotelOwnership,
+        fetchUser,
+        isLoaded,      // ✅ Expose these
+        isSignedIn     // ✅ Expose these
     }
 
     return(
@@ -144,8 +172,4 @@ export const AppProvider = ({ children })=>{
             {children}
         </AppContext.Provider>
     )
-}
-
-export const useAppContext = ()=> {
-   return useContext(AppContext);
 }

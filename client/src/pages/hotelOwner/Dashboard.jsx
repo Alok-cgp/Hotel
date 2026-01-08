@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import Title from '../../components/Title'
-import { assets, dashboardDummyData } from '../../assets/assets'
+import { assets } from '../../assets/assets'
 import toast from 'react-hot-toast'
-import { useAppContext } from '../../context/AppContext'
+import { useAppContext } from '../../context/Context'
+import { useCallback } from 'react'
 
 const Dashboard = () => {
 
@@ -14,7 +15,7 @@ const Dashboard = () => {
       totalRevenue: 0,
     })
 
-    const fetchDashboardData = async ()=>{
+    const fetchDashboardData = useCallback(async ()=>{
       try {
         const {data} = await axios.get('/api/bookings/hotel', {headers: {Authorization: `Bearer ${await getToken()}`}})
         if(data.success){
@@ -27,7 +28,7 @@ const Dashboard = () => {
       } catch (error) {
         toast.error(error.message)
       }
-    }
+    },[axios, getToken, dashboardData.bookings])
 
     useEffect(()=>{
         if(user){
@@ -38,7 +39,7 @@ const Dashboard = () => {
             console.log("Dashboard bookings:", dashboardData.bookings);
           }, 2000);
         }
-    },[user])
+    },[user, fetchDashboardData, dashboardData.bookings])
 
   return (
     <div>

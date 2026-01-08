@@ -9,8 +9,8 @@ export const registerHotel = async (req,res)=>{
         // console.log("req.user:", req.user);
         // console.log("req.auth:", req.auth);
         
-        // Try both patterns to see which one works
-        const owner = req.auth.userId;
+        // Use userId set by protect middleware
+        const owner = req.userId;
         
         if (!owner) {
             return res.status(401).json({
@@ -37,8 +37,8 @@ export const registerHotel = async (req,res)=>{
 
 export const getMyHotel = async (req, res) => {
     try {
-        // Use same flexible pattern
-        const owner = req.user._id;
+        // Use userId set by protect middleware
+        const owner = req.userId;
         
         if (!owner) {
             return res.status(401).json({
@@ -67,8 +67,8 @@ export const checkHotelOwnership = async (req, res) => {
         console.log("req.user:", req.user);
         console.log("req.auth:", req.auth);
         
-        // Try both patterns to see which one works
-        const owner = req.auth?.userId || req.user?._id;
+        // Use userId set by protect middleware
+        const owner = req.userId;
         
         if (!owner) {
             return res.status(401).json({ 

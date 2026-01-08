@@ -132,19 +132,30 @@ export const createBooking = async (req, res) => {
   }
 };
 
+
 // API: Get bookings for logged-in user
 export const getUserBookings = async (req, res) => {
   try {
     const user = req.userId; // Clerk userId
-    const bookings = await Booking.find({ user }).populate("hotel").sort({ createdAt: -1 })
+    
+    const bookings = await Booking.find({ user })
       .populate({
         path: "room",
-        select: "images roomType hotel", // explicitly select images, roomType, hotel
-        populate: { path: "hotel" }
+        select: "images roomType pricePerNight", // Select the fields you need
       })
+      .populate({
+        path: "hotel",
+        select: "name address images", // Populate hotel separately
+      })
+      .sort({ createdAt: -1 });
+
+    console.log("Fetched bookings for user:", user);
+    console.log("Number of bookings:", bookings.length);
+    console.log("First booking room images:", bookings[0]?.room?.images);
 
     res.json({ success: true, bookings });
   } catch (error) {
+    console.error("getUserBookings error:", error);
     res.json({ success: false, message: "Failed to fetch bookings" });
   }
 };

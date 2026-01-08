@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { useParams,useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { assets, facilityIcons, roomCommonData } from '../assets/assets'
 import StarRating from '../components/StarRating'
-import { useAppContext } from '../context/AppContext'
+import { useAppContext } from '../context/Context'
 import toast from 'react-hot-toast'
 
 const RoomDetails = () => {
@@ -17,6 +17,7 @@ const RoomDetails = () => {
   const [guests, setGuests] = useState(1);
 
   const [isAvailable, setIsAvailable] = useState(false);
+  const [totalPrice, setTotalPrice] = useState(0);
 
   const checkAvailability = async () => {
     try {
@@ -78,7 +79,22 @@ const RoomDetails = () => {
       const room = rooms.find(room => room._id === id)
       room && setRoom(room)
       room && setMainImage(room.images[0])
-  },[rooms])
+  },[rooms, id])
+
+  useEffect(() => {
+    if (checkInDate && checkOutDate && room) {
+      const checkIn = new Date(checkInDate);
+      const checkOut = new Date(checkOutDate);
+      const nights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
+      if (nights > 0) {
+        setTotalPrice(nights * room.pricePerNight);
+      } else {
+        setTotalPrice(0);
+      }
+    } else {
+      setTotalPrice(0);
+    }
+  }, [checkInDate, checkOutDate, room]);
     
   return room && (
     <div className='py-28 md:py-35 px-4 md:px-16 lg:px-24 xl:px-32'>
@@ -146,7 +162,13 @@ const RoomDetails = () => {
               </div>
 
             </div>
-            
+
+            {totalPrice > 0 && (
+              <div className='text-lg font-medium text-gray-800'>
+                Total: Rs.{totalPrice}
+              </div>
+            )}
+
             <button
               type={isAvailable ? 'submit' : 'button'}
               onClick={isAvailable ? undefined : checkAvailability}
