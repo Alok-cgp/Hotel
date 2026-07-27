@@ -20,26 +20,19 @@ const Dashboard = () => {
         const {data} = await axios.get('/api/bookings/hotel', {headers: {Authorization: `Bearer ${await getToken()}`}})
         if(data.success){
           setdashboardData(data.dashboardData)
-          console.log(dashboardData.bookings);
-          
         }else{
           toast.error(data.message)
         }
       } catch (error) {
         toast.error(error.message)
       }
-    },[axios, getToken, dashboardData.bookings])
+    },[axios, getToken])
 
     useEffect(()=>{
         if(user){
           fetchDashboardData();
-          // Add this line to log bookings for debugging
-          // Remove after checking
-          setTimeout(() => {
-            console.log("Dashboard bookings:", dashboardData.bookings);
-          }, 2000);
         }
-    },[user, fetchDashboardData, dashboardData.bookings])
+    },[user, fetchDashboardData])
 
   return (
     <div>

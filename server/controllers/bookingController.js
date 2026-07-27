@@ -15,8 +15,7 @@ const checkAvailability = async ({ checkInDate, checkOutDate, room }) => {
     const IsAvailable = bookings.length === 0;
     return IsAvailable;
   } catch (error) {
-    console.error(error.message);
-    // return false;
+    return false;
   }
 };
 
@@ -108,17 +107,10 @@ export const createBooking = async (req, res) => {
       `
     }
 
-    if (!req.userEmail) {
-      console.warn("No recipients defined: req.userEmail is missing. Using fallback email.");
-    }
-
-    console.log("Attempting to send booking confirmation email to:", recipientEmail);
     try {
-      const info = await transporter.sendMail(mailOptions);
-      console.log("Email sent successfully to:", recipientEmail, "Message ID:", info.messageId);
+      await transporter.sendMail(mailOptions);
     } catch (emailError) {
-      console.error("Failed to send email:", emailError.message);
-      // Optionally, you could return an error here, but since booking is created, maybe just log
+      // Silently handle email sending error
     }
 
     res.json({
@@ -126,8 +118,6 @@ export const createBooking = async (req, res) => {
       message: "Booking created successfully"
     });
   } catch (error) {
-    console.log(error);
-    // console.error("createBooking error:", error);
     res.json({ success: false, message: error.message });
   }
 };
@@ -149,13 +139,8 @@ export const getUserBookings = async (req, res) => {
       })
       .sort({ createdAt: -1 });
 
-    console.log("Fetched bookings for user:", user);
-    console.log("Number of bookings:", bookings.length);
-    console.log("First booking room images:", bookings[0]?.room?.images);
-
     res.json({ success: true, bookings });
   } catch (error) {
-    console.error("getUserBookings error:", error);
     res.json({ success: false, message: "Failed to fetch bookings" });
   }
 };
@@ -182,7 +167,6 @@ export const getHotelBookings = async (req, res) => {
       dashboardData: { totalBookings, totalRevenue, bookings },
     });
   } catch (error) {
-    console.error("getHotelBookings error:", error.message, error.stack);
     res.json({ success: false, message: "Failed to fetch bookings: " + error.message });
   }
 };
@@ -249,7 +233,6 @@ export const stripePayment = async (req, res) => {
     });
     res.json({ success: true, url: session.url });
   } catch (error) {
-    console.error("Stripe payment error:", error);
     res.json({ success: false, message: "Payment failed: " + error.message });
   }
 };
@@ -283,7 +266,6 @@ export const verifyPaymentSuccess = async (req, res) => {
       res.json({ success: false, message: "Payment incomplete" });
     }
   } catch (error) {
-    console.error("Payment verification error:", error);
     res.json({ success: false, message: error.message });
   }
 };

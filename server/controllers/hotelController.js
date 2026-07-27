@@ -55,7 +55,6 @@ export const getMyHotel = async (req, res) => {
 
         res.json({ success: true, hotel });
     } catch (error) {
-        console.error("getMyHotel error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -63,10 +62,6 @@ export const getMyHotel = async (req, res) => {
 // New function to check if user is hotel owner
 export const checkHotelOwnership = async (req, res) => {
     try {
-        // Debug logging
-        console.log("req.user:", req.user);
-        console.log("req.auth:", req.auth);
-        
         // Use userId set by protect middleware
         const owner = req.userId;
         
@@ -85,7 +80,6 @@ export const checkHotelOwnership = async (req, res) => {
             hotel: hotel || null 
         });
     } catch (error) {
-        console.error("checkHotelOwnership error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

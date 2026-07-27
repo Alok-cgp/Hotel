@@ -54,10 +54,8 @@ export const protect = async (req, res, next) => {
     req.userEmail = payload.email || null;
     req.userName = payload.name || payload.first_name || "Guest";
     
-    console.log("✅ User authenticated:", req.userId);
     next();
   } catch (error) {
-    console.error("❌ Auth error:", error.message);
     res.status(401).json({ 
       success: false,
       message: "Authentication failed",

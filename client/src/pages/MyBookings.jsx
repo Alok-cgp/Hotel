@@ -13,16 +13,13 @@ const MyBookings = () => {
     const fetchUserBookings = useCallback(async()=>{
         try {
             if (!isLoaded || !isSignedIn) {
-                console.log("Not ready to fetch bookings");
                 setLoading(false);
                 return;
             }
 
             const token = await getToken();
-            console.log("Fetching bookings with token:", token ? "✓" : "✗");
             
             if (!token) {
-                console.log("No token for bookings");
                 setLoading(false);
                 return;
             }
@@ -35,12 +32,10 @@ const MyBookings = () => {
             
             if(data.success){
                 setBookings(data.bookings);
-                console.log("Bookings fetched:", data.bookings.length);
             }else{
                 toast.error(data.message);
             }
         } catch (error) {
-            console.log("Fetch bookings error:", error.response?.status);
             if (error?.response?.status === 401) {
                 toast.error("Please sign in to view bookings");
             } else {
@@ -105,11 +100,9 @@ const MyBookings = () => {
 
     useEffect(()=>{
         if(isLoaded && isSignedIn && user){
-            console.log("MyBookings: Fetching data...");
             fetchUserBookings();
             checkPaymentStatus();
         } else if (isLoaded && !isSignedIn) {
-            console.log("MyBookings: User not signed in");
             setLoading(false);
         }
     },[isLoaded, isSignedIn, user])

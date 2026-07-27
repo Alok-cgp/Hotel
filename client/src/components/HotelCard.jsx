@@ -17,7 +17,6 @@ const HotelCard = ({room, index}) => {
         alt={room.hotel?.name}
         className='w-full h-64 object-cover'
         onError={(e) => {
-          console.error(`Image failed to load:`, room.images[imageIndex]);
           e.target.src = assets.roomImg1;
         }}
       />

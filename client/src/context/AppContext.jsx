@@ -27,11 +27,9 @@ export const AppProvider = ({ children })=>{
             if(data.success){
                 setRooms(data.rooms)
             }else{
-                console.error("fetchRooms error:", data.message)
                 setRooms(roomsDummyData)
             }
         } catch (error) {
-            console.error("fetchRooms error:", error.message)
             setRooms(roomsDummyData)
         }
     },[])
@@ -40,12 +38,10 @@ export const AppProvider = ({ children })=>{
         try {
             // More robust checks
             if (!isLoaded) {
-                console.log("Clerk not loaded yet");
                 return;
             }
             
             if (!isSignedIn) {
-                console.log("User not signed in");
                 setIsOwner(false);
                 setLoadingUser(false);
                 return;
@@ -53,10 +49,8 @@ export const AppProvider = ({ children })=>{
 
             // Wait for token
             const token = await getToken();
-            console.log("Token obtained:", token ? "✓" : "✗");
             
             if (!token) {
-                console.log("No token available");
                 setIsOwner(false);
                 setLoadingUser(false);
                 return;
@@ -69,16 +63,12 @@ export const AppProvider = ({ children })=>{
             if(data.success){
                 setIsOwner(data.role === "hotelOwner");
                 setSearchedCities(data.recentSearchedCities)
-                console.log("User fetched successfully, role:", data.role);
             }else{
                 setIsOwner(false);
             }
         } catch (error) {
-            console.log("fetchUser error:", error.response?.status, error.message);
             if (error?.response?.status === 401) {
                 setIsOwner(false);
-            } else {
-                console.error("Failed to load user data:", error.message);
             }
         } 
         finally {
@@ -103,12 +93,9 @@ export const AppProvider = ({ children })=>{
             
             if (data.success) {
                 setIsOwner(data.isOwner);
-                console.log("Hotel ownership check:", data.isOwner);
             }
         } catch (error) {
-            if (error?.response?.status !== 401) {
-                console.log("Error checking hotel ownership:", error);
-            }
+            // Ignore unauthenticated errors
         }
     },[getToken, isLoaded, isSignedIn]);
 
@@ -125,7 +112,7 @@ export const AppProvider = ({ children })=>{
             await fetchUser();
             await checkHotelOwnership();
         } catch (error) {
-            console.log("Error in fetchUserAndHotelStatus:", error);
+            // Silently handle status fetch error
         } finally {
             setLoadingUser(false);
         }
