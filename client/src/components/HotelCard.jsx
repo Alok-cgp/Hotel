@@ -6,9 +6,6 @@ const HotelCard = ({room, index}) => {
   // Force cycle through ALL available images
   const imageIndex = index % room.images.length;
   
-  console.log(`Card ${index}: Using image ${imageIndex} of ${room.images.length}`);
-  console.log(`Image URL:`, room.images[imageIndex]);
-  
   return (
     <Link 
       to={'/rooms/' + room._id} 
