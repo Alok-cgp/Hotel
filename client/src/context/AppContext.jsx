@@ -27,11 +27,11 @@ export const AppProvider = ({ children })=>{
             if(data.success){
                 setRooms(data.rooms)
             }else{
-                toast.error(data.message)
+                console.error("fetchRooms error:", data.message)
                 setRooms(roomsDummyData)
             }
         } catch (error) {
-            toast.error(error.message)
+            console.error("fetchRooms error:", error.message)
             setRooms(roomsDummyData)
         }
     },[])
@@ -78,7 +78,7 @@ export const AppProvider = ({ children })=>{
             if (error?.response?.status === 401) {
                 setIsOwner(false);
             } else {
-                toast.error("Failed to load user data")
+                console.error("Failed to load user data:", error.message);
             }
         } 
         finally {

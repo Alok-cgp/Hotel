@@ -18,7 +18,13 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://quickstay-omega-six.vercel.app"],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like curl or mobile) or any vercel.app / localhost origin
+      if (!origin || origin.startsWith("http://localhost") || origin.endsWith(".vercel.app")) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
