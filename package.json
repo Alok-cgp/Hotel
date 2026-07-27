@@ -1,7 +1,7 @@
 {
   "name": "hotel-monorepo",
   "scripts": {
-    "build": "npm --prefix client install && npm --prefix client run build && cp -r client/dist ./"
+    "build": "npm --prefix client install && npm --prefix client run build"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
