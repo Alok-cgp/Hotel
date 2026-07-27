@@ -6,7 +6,12 @@ import { toast } from "react-hot-toast";
 import { roomsDummyData } from "../assets/assets";
 import { AppContext } from "./Context";
 
-axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
+const rawBackendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+const backendUrl = rawBackendUrl.startsWith("http://") || rawBackendUrl.startsWith("https://")
+  ? rawBackendUrl
+  : `https://${rawBackendUrl}`;
+
+axios.defaults.baseURL = backendUrl;
 
 export const AppProvider = ({ children })=>{
 
